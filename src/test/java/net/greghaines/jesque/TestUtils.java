@@ -1,12 +1,12 @@
 /*
  * Copyright 2011 Greg Haines
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,17 +29,17 @@ import redis.clients.jedis.Jedis;
 
 /**
  * Test helpers.
- * 
+ *
  * @author Greg Haines
  * @author Animesh Kumar
  */
 public final class TestUtils {
-    
+
     private static final Logger log = LoggerFactory.getLogger(TestUtils.class);
 
     /**
      * Reset the Redis database using the supplied Config.
-     * 
+     *
      * @param config
      *            the location of the Redis server
      */
@@ -55,7 +55,7 @@ public final class TestUtils {
 
     /**
      * Create a connection to Redis from the given Config.
-     * 
+     *
      * @param config
      *            the location of the Redis server
      * @return a new connection
@@ -78,6 +78,15 @@ public final class TestUtils {
             for (final Job job : jobs) {
                 client.enqueue(queue, job);
             }
+        } finally {
+            client.end();
+        }
+    }
+
+    public static void enqueueJobsInBatches(String queue, List<Job> jobs, Config config) {
+        final Client client = new ClientImpl(config);
+        try {
+            client.enqueueBatched(queue, jobs);
         } finally {
             client.end();
         }

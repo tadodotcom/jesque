@@ -75,6 +75,12 @@ public class IntegrationTest {
     }
 
     @Test
+    public void batchedJobSuccess() {
+        LOG.info("Running batchedJobSuccess()...");
+        assertBatchSuccess(null);
+    }
+
+    @Test
     public void jobFailure() throws Exception {
         LOG.info("Running jobFailure()...");
         assertFailure(null);
@@ -185,6 +191,20 @@ public class IntegrationTest {
         }
     }
 
+    private static void assertBatchSuccess(final WorkerListener listener, final WorkerEvent... events) {
+        final Job job = new Job("TestAction", new Object[] { 1, 2.3, true, "test", Arrays.asList("inner", 4.5) });
+
+        doWorkInBatches(Arrays.asList(job), map(entry("TestAction", TestAction.class)), listener, events);
+
+        final Jedis jedis = createJedis(CONFIG);
+        try {
+            Assert.assertEquals("1", jedis.get(createKey(CONFIG.getNamespace(), STAT, PROCESSED)));
+            Assert.assertNull(jedis.get(createKey(CONFIG.getNamespace(), STAT, FAILED)));
+        } finally {
+            jedis.quit();
+        }
+    }
+
     private static void assertFailure(final WorkerListener listener, final WorkerEvent... events) {
         final Job job = new Job("FailAction");
 
@@ -227,6 +247,21 @@ public class IntegrationTest {
         workerThread.start();
         try {
             TestUtils.enqueueJobs(TEST_QUEUE, jobs, CONFIG);
+        } finally {
+            TestUtils.stopWorker(worker, workerThread);
+        }
+    }
+
+    private static void doWorkInBatches(final List<Job> jobs, final Map<String, ? extends Class<? extends Runnable>> jobTypes,
+            final WorkerListener listener, final WorkerEvent... events) {
+        final Worker worker = new WorkerImpl(CONFIG, Arrays.asList(TEST_QUEUE), new MapBasedJobFactory(jobTypes));
+        if (listener != null && events.length > 0) {
+            worker.getWorkerEventEmitter().addListener(listener, events);
+        }
+        final Thread workerThread = new Thread(worker);
+        workerThread.start();
+        try {
+            TestUtils.enqueueJobsInBatches(TEST_QUEUE, jobs, CONFIG);
         } finally {
             TestUtils.stopWorker(worker, workerThread);
         }

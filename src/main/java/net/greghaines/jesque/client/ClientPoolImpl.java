@@ -21,6 +21,8 @@ import net.greghaines.jesque.utils.PoolUtils.PoolWork;
 import redis.clients.jedis.Jedis;
 import redis.clients.util.Pool;
 
+import java.util.List;
+
 /**
  * A Client implementation that gets its connection to Redis from a connection
  * pool.
@@ -34,7 +36,7 @@ public class ClientPoolImpl extends AbstractClient {
 
     /**
      * Create a ClientPoolImpl.
-     * 
+     *
      * @param config
      *            used to get the namespace for key creation
      * @param jedisPool
@@ -60,6 +62,20 @@ public class ClientPoolImpl extends AbstractClient {
             @Override
             public Void doWork(final Jedis jedis) {
                 doEnqueue(jedis, getNamespace(), queue, jobJson);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    protected void doEnqueueBatched(final String queue, final List<String> jobJsons) throws Exception {
+        PoolUtils.doWorkInPool(this.jedisPool, new PoolWork<Jedis, Void>() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public Void doWork(final Jedis jedis) {
+                doEnqueueBatched(jedis, getNamespace(), queue, jobJsons);
                 return null;
             }
         });
