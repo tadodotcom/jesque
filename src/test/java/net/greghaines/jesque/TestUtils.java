@@ -1,12 +1,12 @@
 /*
  * Copyright 2011 Greg Haines
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,33 +15,30 @@
  */
 package net.greghaines.jesque;
 
-import java.util.List;
-
 import net.greghaines.jesque.client.Client;
 import net.greghaines.jesque.client.ClientImpl;
 import net.greghaines.jesque.worker.JobExecutor;
-
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import redis.clients.jedis.Jedis;
+
+import java.util.List;
 
 /**
  * Test helpers.
- * 
+ *
  * @author Greg Haines
  * @author Animesh Kumar
  */
 public final class TestUtils {
-    
+
     private static final Logger log = LoggerFactory.getLogger(TestUtils.class);
 
     /**
      * Reset the Redis database using the supplied Config.
-     * 
-     * @param config
-     *            the location of the Redis server
+     *
+     * @param config the location of the Redis server
      */
     public static void resetRedis(final Config config) {
         final Jedis jedis = createJedis(config);
@@ -55,9 +52,8 @@ public final class TestUtils {
 
     /**
      * Create a connection to Redis from the given Config.
-     * 
-     * @param config
-     *            the location of the Redis server
+     *
+     * @param config the location of the Redis server
      * @return a new connection
      */
     public static Jedis createJedis(final Config config) {
@@ -130,5 +126,16 @@ public final class TestUtils {
         Assert.assertEquals(obj1.toString(), obj2.toString());
     }
 
-    private TestUtils() {} // Utility class
+    private TestUtils() {
+    } // Utility class
+
+    public static void pipelineJobs(String testQueue, List<Job> jobs, Config config) {
+        final Client client = new ClientImpl(config);
+        try {
+            client.pipeline(testQueue, jobs.toArray(new Job[0]));
+        } finally {
+            client.end();
+        }
+
+    }
 }

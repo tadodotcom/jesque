@@ -37,6 +37,8 @@ public interface Client {
      */
     void enqueue(String queue, Job job);
 
+    void pipeline(String queue, Job... jobs);
+
     /**
      * Queues a job with high priority in a given queue to be run.
      * 

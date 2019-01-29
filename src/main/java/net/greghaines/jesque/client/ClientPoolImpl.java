@@ -65,6 +65,20 @@ public class ClientPoolImpl extends AbstractClient {
         });
     }
 
+    @Override
+    protected void doPipeline(final String queue, final String... jobs) throws Exception {
+        PoolUtils.doWorkInPool(this.jedisPool, new PoolWork<Jedis, Void>() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public Void doWork(final Jedis jedis) {
+                doPipeline(jedis, getNamespace(), queue, jobs);
+                return null;
+            }
+        });
+    }
+
     /**
      * {@inheritDoc}
      */

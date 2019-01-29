@@ -15,16 +15,17 @@
  */
 package net.greghaines.jesque.client;
 
-import static net.greghaines.jesque.utils.ResqueConstants.QUEUE;
-import static net.greghaines.jesque.utils.ResqueConstants.QUEUES;
-
 import net.greghaines.jesque.Config;
 import net.greghaines.jesque.Job;
 import net.greghaines.jesque.json.ObjectMapperFactory;
 import net.greghaines.jesque.utils.JedisUtils;
 import net.greghaines.jesque.utils.JesqueUtils;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.Transaction;
+
+import static net.greghaines.jesque.utils.ResqueConstants.QUEUE;
+import static net.greghaines.jesque.utils.ResqueConstants.QUEUES;
 
 /**
  * Common logic for Client implementations.
@@ -81,6 +82,24 @@ public abstract class AbstractClient implements Client {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public void pipeline(String queue, Job... jobs) {
+        try {
+            String[] mappedJobs = new String[jobs.length];
+            for (int i = 0; i < jobs.length; i++) {
+                validateArguments(queue, jobs[i]);
+                mappedJobs[i] = ObjectMapperFactory.get().writeValueAsString(jobs[i]);
+            }
+            doPipeline(queue, mappedJobs);
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected abstract void doPipeline(String queue, String... jobs) throws Exception;
 
     /**
      * {@inheritDoc}
@@ -176,6 +195,15 @@ public abstract class AbstractClient implements Client {
     public static void doEnqueue(final Jedis jedis, final String namespace, final String queue, final String jobJson) {
         jedis.sadd(JesqueUtils.createKey(namespace, QUEUES), queue);
         jedis.rpush(JesqueUtils.createKey(namespace, QUEUE, queue), jobJson);
+    }
+
+    public static void doPipeline(final Jedis jedis, final String namespace, final String queue, final String... jobs) {
+        Pipeline pipeline = jedis.pipelined();
+        pipeline.sadd(JesqueUtils.createKey(namespace, QUEUES), queue);
+        for (String job : jobs) {
+            pipeline.rpush(JesqueUtils.createKey(namespace, QUEUE, queue), job);
+        }
+        pipeline.sync();
     }
 
     /**

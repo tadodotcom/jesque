@@ -109,6 +109,12 @@ public class ClientImpl extends AbstractClient {
         doEnqueue(this.jedis, getNamespace(), queue, jobJson);
     }
 
+    @Override
+    protected void doPipeline(String queue, String... jobs) {
+        ensureJedisConnection();
+        doPipeline(this.jedis, getNamespace(), queue, jobs);
+    }
+
     /**
      * {@inheritDoc}
      */
